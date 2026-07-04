@@ -1,0 +1,156 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#fff;font-family:system-ui,-apple-system,sans-serif;}
+canvas{display:block;border-radius:12px;border:1.5px solid #e8e8e8;touch-action:none;}
+.fml{font-size:13px;padding:10px 16px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#2c2c2a;margin:6px 0;font-family:ui-monospace,monospace;line-height:1.8;}
+.row{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap;}
+.pill{font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:6px 14px;white-space:nowrap;}
+.val{min-width:70px;text-align:center;font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:5px 10px;}
+.btn{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #d0d0d0;background:#fff;color:#2c2c2a;}
+.info{font-size:12px;padding:8px 14px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#555;margin:6px 0;font-family:ui-monospace,monospace;line-height:1.8;}
+input[type=range]{flex:1;min-width:110px;}
+</style>
+
+<canvas id="cv" style="width:100%;height:58vh;min-height:330px;"></canvas>
+
+<div class="fml">
+  <b style="color:#185fa5">M̄₀(F̄) = ℓ̄ × F̄</b> &nbsp;⇒&nbsp; |M| = |F|·|ℓ|·<b style="color:#E24B4A">sin θ</b> (seule la composante ⊥ compte !) &nbsp;|&nbsp; Équilibre : <b style="color:#1D9E75">ΣF̄ = 0̄</b> (translation) <b>et</b> <b style="color:#1D9E75">ΣM̄ = 0̄</b> (rotation)
+</div>
+
+<div class="row">
+  <span class="pill" style="min-width:150px;border-color:#b5d4f4;color:#185fa5;">F₁ (poids, gauche)</span>
+  <input type="range" id="F1" min="5" max="40" value="20" step="1" style="accent-color:#378ADD;">
+  <span class="val" id="F1v" style="border-color:#b5d4f4;color:#185fa5;">20 N</span>
+</div>
+<div class="row">
+  <span class="pill" style="min-width:150px;border-color:#b5d4f4;color:#185fa5;">ℓ₁ (bras gauche)</span>
+  <input type="range" id="d1" min="0.3" max="1.4" value="0.8" step="0.05" style="accent-color:#378ADD;">
+  <span class="val" id="d1v" style="border-color:#b5d4f4;color:#185fa5;">0.8 m</span>
+</div>
+<div class="row">
+  <span class="pill" style="min-width:150px;border-color:#f09595;color:#E24B4A;">F₂ (appliquée, droite)</span>
+  <input type="range" id="F2" min="0" max="40" value="16" step="1" style="accent-color:#E24B4A;">
+  <span class="val" id="F2v" style="border-color:#f09595;color:#E24B4A;">16 N</span>
+</div>
+<div class="row">
+  <span class="pill" style="min-width:150px;border-color:#f09595;color:#E24B4A;">ℓ₂ (bras droit)</span>
+  <input type="range" id="d2" min="0.3" max="1.4" value="1.0" step="0.05" style="accent-color:#E24B4A;">
+  <span class="val" id="d2v" style="border-color:#f09595;color:#E24B4A;">1.0 m</span>
+</div>
+<div class="row">
+  <span class="pill" style="min-width:150px;border-color:#f5c88f;color:#BA7517;">θ (angle F₂ / levier)</span>
+  <input type="range" id="th" min="15" max="165" value="90" step="5" style="accent-color:#BA7517;">
+  <span class="val" id="thv" style="border-color:#f5c88f;color:#BA7517;">90°</span>
+</div>
+
+<div class="info" id="info"></div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const RED='#E24B4A',BLUE='#378ADD',BLUE_D='#185fa5',GREEN='#1D9E75',ORANGE='#BA7517',GREY='#9aa0a6',AX='#c8ccd0';
+let W=0,H=0,dpr=1;
+let F1=20,d1=0.8,F2=16,d2=1.0,thDeg=90;
+let phi=0,phiV=0; // inclinaison du levier
+
+function bind(id,fmt,f){const s=document.getElementById(id),o=document.getElementById(id+'v');
+  s.addEventListener('input',()=>{const v=parseFloat(s.value);f(v);o.textContent=fmt(v);});}
+bind('F1',v=>v+' N',v=>F1=v);
+bind('d1',v=>v+' m',v=>d1=v);
+bind('F2',v=>v+' N',v=>F2=v);
+bind('d2',v=>v+' m',v=>d2=v);
+bind('th',v=>v+'°',v=>thDeg=v);
+
+function syncSize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;
+  const nW=Math.round(r.width)||700,nH=Math.round(r.height)||350;
+  if(nW!==W||nH!==H){W=nW;H=nH;cv.width=W*dpr;cv.height=H*dpr;}
+  ctx.setTransform(dpr,0,0,dpr,0,0);}
+
+function arrow(x,y,vx,vy,col,lab,w,dash){
+  const len=Math.hypot(vx,vy);if(len<3)return;
+  const ex=x+vx,ey=y+vy;
+  ctx.strokeStyle=col;ctx.lineWidth=w||2.5;ctx.lineCap='round';
+  if(dash)ctx.setLineDash(dash);
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();ctx.setLineDash([]);
+  const hs=(w||2.5)*3.2,ang=Math.atan2(vy,vx);
+  ctx.fillStyle=col;ctx.save();ctx.translate(ex,ey);ctx.rotate(ang);
+  ctx.beginPath();ctx.moveTo(hs,0);ctx.lineTo(-hs*0.7,-hs*0.55);ctx.lineTo(-hs*0.7,hs*0.55);ctx.closePath();ctx.fill();ctx.restore();
+  if(lab){ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillStyle=col;
+    ctx.fillText(lab,ex+vx/len*15,ey+vy/len*15+4);}
+}
+
+function draw(){
+  syncSize();
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  const ox=W*0.5,oy=H*0.55;
+  const S=Math.min(W*0.30,190); // px par mètre (max bras 1.4m)
+
+  const th=thDeg*Math.PI/180;
+  // Moments (CCW positif) : F1 vers le bas à gauche → CCW+, F2 « vers le bas » côté droit → CW−
+  const M1=F1*d1;
+  const M2=F2*d2*Math.sin(th);
+  const Mnet=M1-M2;
+  const eq=Math.abs(Mnet)<0.6;
+
+  // dynamique de bascule (visuel)
+  phiV+=(-Mnet*0.00035-phiV*0.06);
+  phi=Math.max(-0.28,Math.min(0.28,phi+phiV));
+  if(eq){phi*=0.92;phiV*=0.8;}
+
+  const c=Math.cos(phi),s=Math.sin(phi);
+  const P=(dist)=>({x:ox+dist*S*c,y:oy+dist*S*s});   // dist>0 → droite
+
+  // pivot
+  ctx.fillStyle='#e8e8e8';ctx.strokeStyle=GREY;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(ox,oy+4);ctx.lineTo(ox-22,oy+52);ctx.lineTo(ox+22,oy+52);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle=AX;ctx.beginPath();ctx.moveTo(ox-60,oy+52);ctx.lineTo(ox+60,oy+52);ctx.stroke();
+
+  // levier
+  const L=P(-1.5),Rt=P(1.5);
+  ctx.strokeStyle='#4a4a48';ctx.lineWidth=8;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(L.x,L.y);ctx.lineTo(Rt.x,Rt.y);ctx.stroke();
+
+  // O
+  ctx.fillStyle='#fff';ctx.strokeStyle=GREY;ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(ox,oy,6,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle=GREY;ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText('O',ox,oy+24);
+
+  // F1 : poids bleu à gauche
+  const p1=P(-d1);
+  arrow(p1.x,p1.y,0,Math.min(F1*2.6,110),BLUE,'F̄₁',3);
+  ctx.fillStyle=BLUE_D;ctx.font='600 11px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText('ℓ₁='+d1+' m',(ox+p1.x)/2,(oy+p1.y)/2-10);
+
+  // F2 : rouge à droite, angle θ mesuré depuis le levier
+  const p2=P(d2);
+  const dir={x:Math.cos(phi+th),y:Math.sin(phi+th)};  // θ depuis l'axe du levier
+  const len2=Math.min(F2*2.6,110);
+  arrow(p2.x,p2.y,dir.x*len2,dir.y*len2,RED,'F̄₂',3);
+  ctx.fillStyle='#a32d2d';ctx.font='600 11px ui-monospace,monospace';
+  ctx.fillText('ℓ₂='+d2+' m',(ox+p2.x)/2,(oy+p2.y)/2-10);
+
+  // décomposition de F2 : composante ⊥ (verte, F·sinθ) et ∥ (grise) — comme dans le cours !
+  const perp={x:-s,y:c};   // ⊥ au levier (vers le bas visuel)
+  const para={x:c,y:s};
+  const Fp=F2*Math.sin(th), Fl=F2*Math.cos(th);
+  arrow(p2.x,p2.y,perp.x*Fp*2.6,perp.y*Fp*2.6,GREEN,'F₂·sinθ',2,[5,4]);
+  if(Math.abs(Fl)>1)arrow(p2.x,p2.y,para.x*Fl*2.6,para.y*Fl*2.6,'#b7b7b5','F₂·cosθ',1.6,[5,4]);
+  // arc θ
+  ctx.strokeStyle=ORANGE;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(p2.x,p2.y,24,phi,phi+th);ctx.stroke();
+  ctx.fillStyle=ORANGE;ctx.font='600 12px system-ui';
+  ctx.fillText('θ',p2.x+34*Math.cos(phi+th/2),p2.y+34*Math.sin(phi+th/2)+4);
+
+  // équilibre ?
+  ctx.font='600 14px system-ui';ctx.textAlign='center';
+  if(eq){ctx.fillStyle=GREEN;ctx.fillText('ÉQUILIBRE :  M₁ = M₂  (ΣM̄ = 0)',W/2,28);}
+  else{ctx.fillStyle=GREY;ctx.fillText(Mnet>0?'M₁ > M₂ → bascule à gauche':'M₂ > M₁ → bascule à droite',W/2,28);}
+
+  document.getElementById('info').innerHTML=
+    '<b style="color:'+BLUE_D+'">M₁ = F₁·ℓ₁ = '+M1.toFixed(1)+' N·m</b> &nbsp;|&nbsp; '+
+    '<b style="color:'+RED+'">M₂ = F₂·ℓ₂·sinθ = '+F2+'·'+d2+'·sin('+thDeg+'°) = '+M2.toFixed(1)+' N·m</b> &nbsp;|&nbsp; '+
+    'ΣM = '+Mnet.toFixed(1)+' N·m'+(eq?' &nbsp;✓':'');
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
