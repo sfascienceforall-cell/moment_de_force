@@ -1,156 +1,166 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#fff;font-family:system-ui,-apple-system,sans-serif;}
-canvas{display:block;border-radius:12px;border:1.5px solid #e8e8e8;touch-action:none;}
+canvas{display:block;border-radius:12px;border:1.5px solid #e8e8e8;touch-action:none;cursor:crosshair;}
 .fml{font-size:13px;padding:10px 16px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#2c2c2a;margin:6px 0;font-family:ui-monospace,monospace;line-height:1.8;}
-.row{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap;}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap;}
 .pill{font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:6px 14px;white-space:nowrap;}
-.val{min-width:70px;text-align:center;font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:5px 10px;}
-.btn{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #d0d0d0;background:#fff;color:#2c2c2a;}
-.info{font-size:12px;padding:8px 14px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#555;margin:6px 0;font-family:ui-monospace,monospace;line-height:1.8;}
-input[type=range]{flex:1;min-width:110px;}
+.btn{padding:7px 15px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #d0d0d0;background:#fff;color:#2c2c2a;}
+.btn.mode.on{border-color:#0F6E56;background:#e7f6ef;color:#0F6E56;}
+.val{min-width:60px;text-align:center;font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:5px 10px;}
+.info{font-size:12px;padding:8px 14px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#555;margin:6px 0;font-family:ui-monospace,monospace;line-height:1.7;}
+input[type=range]{flex:1;min-width:100px;}
 </style>
 
-<canvas id="cv" style="width:100%;height:58vh;min-height:330px;"></canvas>
-
-<div class="fml">
-  <b style="color:#185fa5">M̄₀(F̄) = ℓ̄ × F̄</b> &nbsp;⇒&nbsp; |M| = |F|·|ℓ|·<b style="color:#E24B4A">sin θ</b> (seule la composante ⊥ compte !) &nbsp;|&nbsp; Équilibre : <b style="color:#1D9E75">ΣF̄ = 0̄</b> (translation) <b>et</b> <b style="color:#1D9E75">ΣM̄ = 0̄</b> (rotation)
-</div>
+<canvas id="cv" style="width:100%;height:58vh;min-height:350px;"></canvas>
+<div class="fml" id="fml"></div>
 
 <div class="row">
-  <span class="pill" style="min-width:150px;border-color:#b5d4f4;color:#185fa5;">F₁ (poids, gauche)</span>
-  <input type="range" id="F1" min="5" max="40" value="20" step="1" style="accent-color:#378ADD;">
-  <span class="val" id="F1v" style="border-color:#b5d4f4;color:#185fa5;">20 N</span>
+  <button class="btn mode on" id="mE" onclick="setMode('explore')">Explorer</button>
+  <button class="btn mode" id="mB" onclick="setMode('balance')">Équilibre (balançoire)</button>
 </div>
-<div class="row">
-  <span class="pill" style="min-width:150px;border-color:#b5d4f4;color:#185fa5;">ℓ₁ (bras gauche)</span>
-  <input type="range" id="d1" min="0.3" max="1.4" value="0.8" step="0.05" style="accent-color:#378ADD;">
-  <span class="val" id="d1v" style="border-color:#b5d4f4;color:#185fa5;">0.8 m</span>
+
+<div class="row" id="ctlE">
+  <span class="pill" style="color:#0F6E56;border-color:#79c6a6;">🖱 glisse le point d'application (bleu) ou la pointe de la force (rouge)</span>
 </div>
-<div class="row">
-  <span class="pill" style="min-width:150px;border-color:#f09595;color:#E24B4A;">F₂ (appliquée, droite)</span>
-  <input type="range" id="F2" min="0" max="40" value="16" step="1" style="accent-color:#E24B4A;">
-  <span class="val" id="F2v" style="border-color:#f09595;color:#E24B4A;">16 N</span>
-</div>
-<div class="row">
-  <span class="pill" style="min-width:150px;border-color:#f09595;color:#E24B4A;">ℓ₂ (bras droit)</span>
-  <input type="range" id="d2" min="0.3" max="1.4" value="1.0" step="0.05" style="accent-color:#E24B4A;">
-  <span class="val" id="d2v" style="border-color:#f09595;color:#E24B4A;">1.0 m</span>
-</div>
-<div class="row">
-  <span class="pill" style="min-width:150px;border-color:#f5c88f;color:#BA7517;">θ (angle F₂ / levier)</span>
-  <input type="range" id="th" min="15" max="165" value="90" step="5" style="accent-color:#BA7517;">
-  <span class="val" id="thv" style="border-color:#f5c88f;color:#BA7517;">90°</span>
+
+<div id="ctlB" style="display:none;">
+  <div class="row">
+    <span class="pill" style="color:#a32d2d;border-color:#f09595;">gauche F₁</span>
+    <input type="range" id="F1" min="1" max="10" value="6" step="0.5" style="accent-color:#E24B4A;max-width:110px;">
+    <span class="val" id="F1v" style="color:#a32d2d;border-color:#f09595;">6 N</span>
+    <span class="pill">bras d₁</span>
+    <input type="range" id="d1" min="1" max="5" value="3" step="0.25" style="accent-color:#9aa0a6;max-width:110px;">
+    <span class="val" id="d1v">3 m</span>
+  </div>
+  <div class="row">
+    <span class="pill" style="color:#0F6E56;border-color:#9FE1CB;">droite F₂</span>
+    <input type="range" id="F2" min="1" max="10" value="4" step="0.5" style="accent-color:#1D9E75;max-width:110px;">
+    <span class="val" id="F2v" style="color:#0F6E56;border-color:#9FE1CB;">4 N</span>
+    <span class="pill">bras d₂</span>
+    <input type="range" id="d2" min="1" max="5" value="3" step="0.25" style="accent-color:#9aa0a6;max-width:110px;">
+    <span class="val" id="d2v">3 m</span>
+  </div>
 </div>
 
 <div class="info" id="info"></div>
 
 <script>
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-const RED='#E24B4A',BLUE='#378ADD',BLUE_D='#185fa5',GREEN='#1D9E75',ORANGE='#BA7517',GREY='#9aa0a6',AX='#c8ccd0';
-let W=0,H=0,dpr=1;
-let F1=20,d1=0.8,F2=16,d2=1.0,thDeg=90;
-let phi=0,phiV=0; // inclinaison du levier
+const RED='#E24B4A',DRED='#a32d2d',BLUE='#378ADD',BLUE_D='#185fa5',GREEN='#1D9E75',ORANGE='#BA7517',GREY='#9aa0a6',AX='#c8ccd0',INK='#3d3d3a';
+let W=0,H=0,dpr=1,mode='explore';
+const kR=44,kF=12;                          // px/m et px/N
+let aOff={x:-118,y:-70}, fOff={x:-26,y:78}; // r (O->A) et F, en px
+let F1=6,d1=3,F2=4,d2=3,anim=0;
+
+function setMode(m){mode=m;
+  document.getElementById('mE').className='btn mode'+(m==='explore'?' on':'');
+  document.getElementById('mB').className='btn mode'+(m==='balance'?' on':'');
+  document.getElementById('ctlE').style.display=m==='explore'?'flex':'none';
+  document.getElementById('ctlB').style.display=m==='balance'?'block':'none';
+  cv.style.cursor=m==='explore'?'crosshair':'default';
+  document.getElementById('fml').innerHTML= m==='balance'
+   ?'<b style="color:#185fa5">Équilibre</b> : ΣM = 0 ⇒ <b style="color:#E24B4A">F₁·d₁</b> = <b style="color:#1D9E75">F₂·d₂</b>'
+   :'<b style="color:#185fa5">M = F · d</b> avec <b>d = r·sinθ</b> (bras de levier = distance ⊥ de O à la ligne d\'action) = <b style="color:#BA7517">F·r·sinθ</b> | N·m';}
+
+function syncSize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;
+  const nW=Math.round(r.width)||700,nH=Math.round(r.height)||360;
+  if(nW!==W||nH!==H){W=nW;H=nH;cv.width=W*dpr;cv.height=H*dpr;}ctx.setTransform(dpr,0,0,dpr,0,0);}
+function arrow(x,y,vx,vy,col,lab,w,dash){const len=Math.hypot(vx,vy);if(len<2)return;const ex=x+vx,ey=y+vy;
+  ctx.strokeStyle=col;ctx.lineWidth=w||2.5;ctx.lineCap='round';if(dash)ctx.setLineDash(dash);
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();ctx.setLineDash([]);
+  const hs=(w||2.5)*3.2,ang=Math.atan2(vy,vx);ctx.fillStyle=col;ctx.save();ctx.translate(ex,ey);ctx.rotate(ang);
+  ctx.beginPath();ctx.moveTo(hs,0);ctx.lineTo(-hs*0.7,-hs*0.55);ctx.lineTo(-hs*0.7,hs*0.55);ctx.closePath();ctx.fill();ctx.restore();
+  if(lab){ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillStyle=col;ctx.fillText(lab,ex+vx/len*16,ey+vy/len*16+5);}}
+function pivotDot(x,y){ctx.fillStyle=INK;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill();
+  ctx.strokeStyle=INK;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x-9,y+16);ctx.lineTo(x,y);ctx.lineTo(x+9,y+16);ctx.stroke();
+  ctx.fillStyle=GREY;ctx.font='12px system-ui';ctx.textAlign='left';ctx.fillText('O',x-16,y+14);}
+function rotArrow(cx,cy,rad,ccw,col){ctx.strokeStyle=col;ctx.lineWidth=2.4;
+  const a0=-0.3,a1=ccw?-2.6:2.0;ctx.beginPath();ctx.arc(cx,cy,rad,a0,a1,ccw);ctx.stroke();
+  const tx=cx+rad*Math.cos(a1),ty=cy+rad*Math.sin(a1),ta=a1+(ccw?-Math.PI/2:Math.PI/2);
+  ctx.fillStyle=col;ctx.save();ctx.translate(tx,ty);ctx.rotate(ta);ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-4,-5);ctx.lineTo(-4,5);ctx.closePath();ctx.fill();ctx.restore();}
+
+let O={x:0,y:0};
+function drawExplore(){
+  O={x:W*0.40,y:H*0.54};
+  const A={x:O.x+aOff.x,y:O.y+aOff.y};
+  const Ftip={x:A.x+fOff.x,y:A.y+fOff.y};
+  const rlen=Math.hypot(aOff.x,aOff.y),Flen=Math.hypot(fOff.x,fOff.y);
+  const Fhat={x:fOff.x/Flen,y:fOff.y/Flen};
+  // pied de la perpendiculaire : projection de O sur la ligne d'action (passant par A, direction Fhat)
+  const AO={x:O.x-A.x,y:O.y-A.y},tproj=AO.x*Fhat.x+AO.y*Fhat.y;
+  const Hf={x:A.x+tproj*Fhat.x,y:A.y+tproj*Fhat.y};
+  // ligne d'action pointillée : couvre A et Hf, avec marge
+  const tA=0, tH=tproj, lo=Math.min(tA,tH)-70, hi=Math.max(tA,tH)+70;
+  ctx.strokeStyle='#d8b0b0';ctx.setLineDash([5,5]);ctx.lineWidth=1.3;
+  ctx.beginPath();ctx.moveTo(A.x+lo*Fhat.x,A.y+lo*Fhat.y);ctx.lineTo(A.x+hi*Fhat.x,A.y+hi*Fhat.y);ctx.stroke();ctx.setLineDash([]);
+  // bras de levier (vert) O -> Hf : perpendiculaire, se termine SUR la ligne d'action
+  ctx.strokeStyle=GREEN;ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(O.x,O.y);ctx.lineTo(Hf.x,Hf.y);ctx.stroke();
+  // marque angle droit au pied
+  const perp={x:-Fhat.y,y:Fhat.x};
+  ctx.strokeStyle=GREEN;ctx.lineWidth=1.2;ctx.beginPath();
+  ctx.moveTo(Hf.x-Fhat.x*8,Hf.y-Fhat.y*8);ctx.lineTo(Hf.x-Fhat.x*8+perp.x*8*Math.sign(tproj>0?-1:1),Hf.y-Fhat.y*8+perp.y*8*Math.sign(tproj>0?-1:1));ctx.stroke();
+  // bras
+  ctx.strokeStyle=INK;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(O.x,O.y);ctx.lineTo(A.x,A.y);ctx.stroke();
+  // force
+  arrow(A.x,A.y,fOff.x,fOff.y,RED,'F̄',3.2);
+  // angle θ entre r et F (au point A)
+  const rb={x:-aOff.x,y:-aOff.y};                 // de A vers O
+  const a1=Math.atan2(rb.y,rb.x),a2=Math.atan2(fOff.y,fOff.x);
+  ctx.strokeStyle=GREY;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(A.x,A.y,26,a1,a2, ((a2-a1+2*Math.PI)%(2*Math.PI))>Math.PI);ctx.stroke();
+  ctx.fillStyle=GREY;ctx.font='600 12px system-ui';ctx.textAlign='center';const am=(a1+a2)/2;ctx.fillText('θ',A.x+34*Math.cos(am),A.y+34*Math.sin(am)+4);
+  // valeurs
+  const r_m=rlen/kR,F_N=Flen/kF,d_m=Math.abs(tproj)/kR;   // d = distance O->action line
+  const cross=aOff.x*fOff.y-aOff.y*fOff.x;                // z (écran : y bas)
+  const ccw=cross<0;                                      // à l'écran, cross<0 => antihoraire
+  const M=F_N*d_m;
+  if(Flen>6)rotArrow(O.x,O.y,rlen*0.42,ccw,ccw?GREEN:RED);
+  pivotDot(O.x,O.y);
+  // étiquettes bras d et points
+  ctx.fillStyle=GREEN;ctx.font='600 11px ui-monospace';ctx.textAlign='center';
+  ctx.fillText('d='+d_m.toFixed(2)+' m',(O.x+Hf.x)/2+perp.x*14,(O.y+Hf.y)/2+perp.y*14);
+  // poignées
+  ctx.fillStyle='#fff';ctx.strokeStyle=BLUE;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(A.x,A.y,7,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.strokeStyle=RED;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(Ftip.x,Ftip.y,6,0,7);ctx.fill();ctx.stroke();
+  const th=Math.acos(Math.max(-1,Math.min(1,(rb.x*Fhat.x+rb.y*Fhat.y)/(Math.hypot(rb.x,rb.y)))));
+  document.getElementById('info').innerHTML='r='+r_m.toFixed(2)+' m | F='+F_N.toFixed(2)+' N | θ='+(th*180/Math.PI).toFixed(0)+'° | bras <b style="color:'+GREEN+'">d=r·sinθ='+d_m.toFixed(2)+' m</b> | <b style="color:'+ORANGE+'">M=F·d='+M.toFixed(2)+' N·m</b> ('+(ccw?'antihoraire +':'horaire −')+')';
+}
 
 function bind(id,fmt,f){const s=document.getElementById(id),o=document.getElementById(id+'v');
   s.addEventListener('input',()=>{const v=parseFloat(s.value);f(v);o.textContent=fmt(v);});}
-bind('F1',v=>v+' N',v=>F1=v);
-bind('d1',v=>v+' m',v=>d1=v);
-bind('F2',v=>v+' N',v=>F2=v);
-bind('d2',v=>v+' m',v=>d2=v);
-bind('th',v=>v+'°',v=>thDeg=v);
-
-function syncSize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;
-  const nW=Math.round(r.width)||700,nH=Math.round(r.height)||350;
-  if(nW!==W||nH!==H){W=nW;H=nH;cv.width=W*dpr;cv.height=H*dpr;}
-  ctx.setTransform(dpr,0,0,dpr,0,0);}
-
-function arrow(x,y,vx,vy,col,lab,w,dash){
-  const len=Math.hypot(vx,vy);if(len<3)return;
-  const ex=x+vx,ey=y+vy;
-  ctx.strokeStyle=col;ctx.lineWidth=w||2.5;ctx.lineCap='round';
-  if(dash)ctx.setLineDash(dash);
-  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();ctx.setLineDash([]);
-  const hs=(w||2.5)*3.2,ang=Math.atan2(vy,vx);
-  ctx.fillStyle=col;ctx.save();ctx.translate(ex,ey);ctx.rotate(ang);
-  ctx.beginPath();ctx.moveTo(hs,0);ctx.lineTo(-hs*0.7,-hs*0.55);ctx.lineTo(-hs*0.7,hs*0.55);ctx.closePath();ctx.fill();ctx.restore();
-  if(lab){ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillStyle=col;
-    ctx.fillText(lab,ex+vx/len*15,ey+vy/len*15+4);}
+bind('F1',v=>v+' N',v=>F1=v);bind('d1',v=>v+' m',v=>d1=v);bind('F2',v=>v+' N',v=>F2=v);bind('d2',v=>v+' m',v=>d2=v);
+function drawBalance(){
+  const Oc={x:W*0.5,y:H*0.5},kb=Math.min(W,H)*0.072;
+  const M1=F1*d1,M2=F2*d2,net=M2-M1;anim+=(net-anim)*0.08;
+  const tilt=Math.max(-0.32,Math.min(0.32,anim*0.03));
+  ctx.save();ctx.translate(Oc.x,Oc.y);ctx.rotate(tilt);
+  ctx.strokeStyle=INK;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-5.2*kb,0);ctx.lineTo(5.2*kb,0);ctx.stroke();
+  function side(sg,d,Fv,col,lab){const x=sg*d*kb,s=14+Fv*2.2;
+    ctx.fillStyle=col+'22';ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-s/2,-s-2,s,s,5);ctx.fill();ctx.stroke();
+    arrow(x,-2,0,Fv*7,col,'',2.4);
+    ctx.fillStyle=col;ctx.font='600 11px ui-monospace';ctx.textAlign='center';ctx.fillText(lab,x,-s-8);
+    ctx.fillStyle=GREY;ctx.font='10px ui-monospace';ctx.fillText('d='+d.toFixed(2),x,16);}
+  side(-1,d1,F1,DRED,'F₁='+F1);side(1,d2,F2,'#0F6E56','F₂='+F2);
+  ctx.restore();pivotDot(Oc.x,Oc.y+2);
+  ctx.fillStyle=DRED;ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText('M₁=F₁·d₁='+M1.toFixed(1)+' N·m',W*0.26,H*0.13);
+  ctx.fillStyle='#0F6E56';ctx.fillText('M₂=F₂·d₂='+M2.toFixed(1)+' N·m',W*0.74,H*0.13);
+  const eq=Math.abs(net)<0.05;ctx.fillStyle=eq?GREEN:GREY;ctx.font='600 14px system-ui';
+  ctx.fillText(eq?'ÉQUILIBRE : M₁ = M₂ (ΣM=0)':(net>0?'penche à droite (M₂>M₁)':'penche à gauche (M₁>M₂)'),W*0.5,H*0.9);
+  document.getElementById('info').innerHTML='Équilibre si F₁·d₁ = F₂·d₂ : '+M1.toFixed(1)+' vs '+M2.toFixed(1)+' N·m. '+(eq?'✓':'Petit bras ⇒ grande force, et inversement (levier).');
 }
 
-function draw(){
-  syncSize();
-  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-  const ox=W*0.5,oy=H*0.55;
-  const S=Math.min(W*0.30,190); // px par mètre (max bras 1.4m)
+function draw(){syncSize();ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  if(mode==='explore')drawExplore();else drawBalance();requestAnimationFrame(draw);}
 
-  const th=thDeg*Math.PI/180;
-  // Moments (CCW positif) : F1 vers le bas à gauche → CCW+, F2 « vers le bas » côté droit → CW−
-  const M1=F1*d1;
-  const M2=F2*d2*Math.sin(th);
-  const Mnet=M1-M2;
-  const eq=Math.abs(Mnet)<0.6;
+function gp(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+let drag=null;
+cv.addEventListener('pointerdown',e=>{if(mode!=='explore')return;const p=gp(e);
+  const A={x:O.x+aOff.x,y:O.y+aOff.y},Ftip={x:A.x+fOff.x,y:A.y+fOff.y};
+  if(Math.hypot(p.x-Ftip.x,p.y-Ftip.y)<16)drag='F';else if(Math.hypot(p.x-A.x,p.y-A.y)<18)drag='A';});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const p=gp(e);
+  if(drag==='A'){aOff={x:p.x-O.x,y:p.y-O.y};if(Math.hypot(aOff.x,aOff.y)<30){const l=Math.hypot(aOff.x,aOff.y)||1;aOff.x*=30/l;aOff.y*=30/l;}}
+  else{const A={x:O.x+aOff.x,y:O.y+aOff.y};fOff={x:p.x-A.x,y:p.y-A.y};if(Math.hypot(fOff.x,fOff.y)<20){const l=Math.hypot(fOff.x,fOff.y)||1;fOff.x*=20/l;fOff.y*=20/l;}}});
+window.addEventListener('pointerup',()=>{drag=null;});
 
-  // dynamique de bascule (visuel)
-  phiV+=(-Mnet*0.00035-phiV*0.06);
-  phi=Math.max(-0.28,Math.min(0.28,phi+phiV));
-  if(eq){phi*=0.92;phiV*=0.8;}
-
-  const c=Math.cos(phi),s=Math.sin(phi);
-  const P=(dist)=>({x:ox+dist*S*c,y:oy+dist*S*s});   // dist>0 → droite
-
-  // pivot
-  ctx.fillStyle='#e8e8e8';ctx.strokeStyle=GREY;ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(ox,oy+4);ctx.lineTo(ox-22,oy+52);ctx.lineTo(ox+22,oy+52);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.strokeStyle=AX;ctx.beginPath();ctx.moveTo(ox-60,oy+52);ctx.lineTo(ox+60,oy+52);ctx.stroke();
-
-  // levier
-  const L=P(-1.5),Rt=P(1.5);
-  ctx.strokeStyle='#4a4a48';ctx.lineWidth=8;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(L.x,L.y);ctx.lineTo(Rt.x,Rt.y);ctx.stroke();
-
-  // O
-  ctx.fillStyle='#fff';ctx.strokeStyle=GREY;ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(ox,oy,6,0,7);ctx.fill();ctx.stroke();
-  ctx.fillStyle=GREY;ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText('O',ox,oy+24);
-
-  // F1 : poids bleu à gauche
-  const p1=P(-d1);
-  arrow(p1.x,p1.y,0,Math.min(F1*2.6,110),BLUE,'F̄₁',3);
-  ctx.fillStyle=BLUE_D;ctx.font='600 11px ui-monospace,monospace';ctx.textAlign='center';
-  ctx.fillText('ℓ₁='+d1+' m',(ox+p1.x)/2,(oy+p1.y)/2-10);
-
-  // F2 : rouge à droite, angle θ mesuré depuis le levier
-  const p2=P(d2);
-  const dir={x:Math.cos(phi+th),y:Math.sin(phi+th)};  // θ depuis l'axe du levier
-  const len2=Math.min(F2*2.6,110);
-  arrow(p2.x,p2.y,dir.x*len2,dir.y*len2,RED,'F̄₂',3);
-  ctx.fillStyle='#a32d2d';ctx.font='600 11px ui-monospace,monospace';
-  ctx.fillText('ℓ₂='+d2+' m',(ox+p2.x)/2,(oy+p2.y)/2-10);
-
-  // décomposition de F2 : composante ⊥ (verte, F·sinθ) et ∥ (grise) — comme dans le cours !
-  const perp={x:-s,y:c};   // ⊥ au levier (vers le bas visuel)
-  const para={x:c,y:s};
-  const Fp=F2*Math.sin(th), Fl=F2*Math.cos(th);
-  arrow(p2.x,p2.y,perp.x*Fp*2.6,perp.y*Fp*2.6,GREEN,'F₂·sinθ',2,[5,4]);
-  if(Math.abs(Fl)>1)arrow(p2.x,p2.y,para.x*Fl*2.6,para.y*Fl*2.6,'#b7b7b5','F₂·cosθ',1.6,[5,4]);
-  // arc θ
-  ctx.strokeStyle=ORANGE;ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.arc(p2.x,p2.y,24,phi,phi+th);ctx.stroke();
-  ctx.fillStyle=ORANGE;ctx.font='600 12px system-ui';
-  ctx.fillText('θ',p2.x+34*Math.cos(phi+th/2),p2.y+34*Math.sin(phi+th/2)+4);
-
-  // équilibre ?
-  ctx.font='600 14px system-ui';ctx.textAlign='center';
-  if(eq){ctx.fillStyle=GREEN;ctx.fillText('ÉQUILIBRE :  M₁ = M₂  (ΣM̄ = 0)',W/2,28);}
-  else{ctx.fillStyle=GREY;ctx.fillText(Mnet>0?'M₁ > M₂ → bascule à gauche':'M₂ > M₁ → bascule à droite',W/2,28);}
-
-  document.getElementById('info').innerHTML=
-    '<b style="color:'+BLUE_D+'">M₁ = F₁·ℓ₁ = '+M1.toFixed(1)+' N·m</b> &nbsp;|&nbsp; '+
-    '<b style="color:'+RED+'">M₂ = F₂·ℓ₂·sinθ = '+F2+'·'+d2+'·sin('+thDeg+'°) = '+M2.toFixed(1)+' N·m</b> &nbsp;|&nbsp; '+
-    'ΣM = '+Mnet.toFixed(1)+' N·m'+(eq?' &nbsp;✓':'');
-
-  requestAnimationFrame(draw);
-}
-draw();
+setMode('explore');draw();
 </script>
